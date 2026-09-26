@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import sys
 
 import requests
@@ -54,6 +55,62 @@ def request_json(method, url, cookie, *, data=None):
     return payload
 
 
+def normalize_cookie(raw_cookie):
+    cookie = raw_cookie.strip()
+    if len(cookie) >= 2 and cookie[0] == cookie[-1] and cookie[0] in {'"', "'"}:
+        cookie = cookie[1:-1].strip()
+
+    if cookie.lower().startswith("cookie:"):
+        cookie = cookie.split(":", 1)[1].strip()
+
+    header_match = re.search(
+        r"(?i)(?:-H|--header)\s+['\"]cookie:\s*([^'\"]+)",
+        cookie,
+    )
+    if header_match:
+        cookie = header_match.group(1).strip()
+
+    cookie = re.sub(r"\s*\n\s*", "; ", cookie)
+    cookie = re.sub(r";\s*", "; ", cookie)
+    return cookie.strip()
+
+
+def cookie_names(cookie):
+    names = []
+    for part in cookie.split(";"):
+        if "=" not in part:
+            continue
+        name = part.split("=", 1)[0].strip()
+        if name:
+            names.append(name)
+    return names
+
+
+def validate_cookie_shape(cookie):
+    names = cookie_names(cookie)
+    lower_names = {name.lower() for name in names}
+    print(
+        f"::notice::GLADOS_COOKIE 格式检查：包含 {names or '无有效 Cookie 名称'}，"
+        f"长度 {len(cookie)}"
+    )
+
+    if not names:
+        print(
+            "::error::GLADOS_COOKIE 格式不正确：没有检测到 Name=Value。"
+            "请复制完整 Cookie 请求头，而不是只复制单独的 Value。"
+        )
+        return False
+
+    if "koa:sess" in lower_names and "koa:sess.sig" not in lower_names:
+        print(
+            "::error::GLADOS_COOKIE 不完整：检测到 koa:sess，但缺少 koa:sess.sig。"
+            "请把两个 Cookie 都复制进去。"
+        )
+        return False
+
+    return True
+
+
 def send_pushplus(token, title, content):
     if not token:
         return
@@ -72,7 +129,7 @@ def send_pushplus(token, title, content):
 def main():
     pushplus_token = os.environ.get("PUSHPLUS_TOKEN", "").strip()
     cookies = [
-        cookie.strip()
+        normalize_cookie(cookie)
         for cookie in os.environ.get("GLADOS_COOKIE", "").split("&")
         if cookie.strip()
     ]
@@ -85,6 +142,10 @@ def main():
     has_error = False
 
     for index, cookie in enumerate(cookies, start=1):
+        if not validate_cookie_shape(cookie):
+            has_error = True
+            continue
+
         checkin = request_json(
             "POST",
             CHECKIN_URL,
