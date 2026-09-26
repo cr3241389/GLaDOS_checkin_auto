@@ -104,9 +104,20 @@ def validate_cookie_shape(cookie):
         )
         return False
 
-    if "koa:sess" in lower_names and "koa:sess.sig" not in lower_names:
+    has_old_sess = "koa:sess" in lower_names
+    has_new_sess = "gld:sess" in lower_names
+    has_new_sig = "gld:sess.sig" in lower_names
+
+    if has_old_sess and not has_new_sess:
         print(
-            "::error::GLADOS_COOKIE 不完整：检测到 koa:sess，但缺少 koa:sess.sig。"
+            "::error::检测到旧版 Cookie（koa:sess）。GLaDOS 已在 2026-09 改为 "
+            "gld:sess；请退出登录后重新登录，再复制新的 Cookie。"
+        )
+        return False
+
+    if has_new_sess and not has_new_sig:
+        print(
+            "::error::GLADOS_COOKIE 不完整：检测到 gld:sess，但缺少 gld:sess.sig。"
             "请把两个 Cookie 都复制进去。"
         )
         return False
