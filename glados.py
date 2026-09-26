@@ -7,12 +7,13 @@ import requests
 
 
 REQUEST_TIMEOUT = 20
+GLADOS_HOST = "glados.cloud"
 CHECKIN_URL = "https://glados.cloud/api/user/checkin"
 STATUS_URL = "https://glados.cloud/api/user/status"
 PUSHPLUS_URL = "https://www.pushplus.plus/send"
 COMMON_HEADERS = {
+    "accept": "application/json, text/plain, */*",
     "referer": "https://glados.cloud/console/checkin",
-    "origin": "https://glados.cloud",
     "user-agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -23,6 +24,8 @@ COMMON_HEADERS = {
 
 def request_json(method, url, cookie, *, data=None):
     headers = {**COMMON_HEADERS, "cookie": cookie}
+    if method.upper() != "GET":
+        headers["origin"] = "https://glados.cloud"
     if data is not None:
         headers["content-type"] = "application/json;charset=UTF-8"
 
@@ -150,7 +153,7 @@ def main():
             "POST",
             CHECKIN_URL,
             cookie,
-            data=json.dumps({"token": "glados.one"}),
+            data=json.dumps({"token": GLADOS_HOST}),
         )
         state = request_json("GET", STATUS_URL, cookie)
 
