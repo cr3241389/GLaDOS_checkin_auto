@@ -9,23 +9,25 @@ on:
   watch:
     types: [started]
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v3
+      - uses: actions/checkout@v7
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v7
         with:
-          python-version: 3.9
+          python-version: '3.11'
       - name: Install requirements
         run: |
           python -m pip install --upgrade pip
           pip install requests
       - name: Run checkin
-        run: |
-          python3 glados.py
-        env: 
-          GLADOS_COOKIE: "${{ secrets.GLADOS_COOKIE }}"
+        run: python glados.py
+        env:
+          GLADOS_COOKIE: ${{ secrets.GLADOS_COOKIE }}
           PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
-      - uses: gautamkrishnar/keepalive-workflow@master  
