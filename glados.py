@@ -109,6 +109,8 @@ def main():
 
         if isinstance(checkin, dict):
             message = checkin.get("message") or checkin.get("msg") or "签到接口未返回消息"
+            if checkin.get("code") == -2:
+                has_error = True
         else:
             message = "签到接口无有效返回"
             has_error = True
